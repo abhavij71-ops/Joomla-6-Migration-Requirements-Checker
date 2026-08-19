@@ -4,10 +4,11 @@
  *  بررسی‌کننده پیش‌نیازهای جوملا! ۶ روی هاست اشتراکی
  *  Joomla! 6 Shared-Hosting Readiness Checker
  * -----------------------------------------------------------------------------
- *  نسخه‌ی ابزار : 2.0.0
- *  توسعه‌دهنده  : شرکت نوید ایرانیان  |  Navid Iranians Co.
+ *  نسخه‌ی ابزار : 2.1.0
+ *  توسعه‌دهنده  : شرکت نوید ایرانیان  |  Navid Iranian Co.
  *  خدمات        : طراحی وب‌سایت · سئو · میزبانی وب · ثبت دامنه · دیجیتال مارکتینگ
- *  تلفن         : 0939 556 6652   |   021 9130 3662
+ *  وب‌سایت      : navidiranian.com · navidiranian.co.ir · joomlafarsi.co.ir · cmssupport.ir
+ *  تلفن         : +98 939 556 6652   |   +98 21 9130 3662
  * -----------------------------------------------------------------------------
  *  © 1405 / 2026 — کلیه حقوق برای شرکت نوید ایرانیان محفوظ است.
  * -----------------------------------------------------------------------------
@@ -35,15 +36,23 @@
  |  ۱) تنظیمات / Settings
  --------------------------------------------------------------------------- */
 
-// برای محافظت از گزارش، اینجا یک کلید بگذارید و با ?key=... باز کنید. خالی = بدون قفل
-// To protect the report, set a key here and open with ?key=... . Empty = no lock.
+// برای محافظت از گزارش، اینجا یک کلید بگذارید و با ?key=... باز کنید.
+// اگر خالی بماند، ابزار خودش در همین پوشه یک کلید تصادفی می‌سازد (به بخش ۱.۲ نگاه کنید).
+// To protect the report, set a key here and open with ?key=... .
+// If left empty, the tool auto-generates a random key in this folder (see section 1.2 below).
 define('NVD_ACCESS_KEY', '');
 
-define('NVD_VERSION',  '2.0.0');
+define('NVD_VERSION',  '2.1.0');
 define('NVD_COMPANY',  'شرکت نوید ایرانیان');
-define('NVD_COMPANY_EN', 'Navid Iranians Co.');
-define('NVD_PHONE1',   '09395566652');
-define('NVD_PHONE2',   '02191303662');
+define('NVD_COMPANY_EN', 'Navid Iranian Co.');
+define('NVD_PHONE1',   '+989395566652');
+define('NVD_PHONE2',   '+982191303662');
+define('NVD_SITES', array(
+    'navidiranian.com'   => 'https://navidiranian.com/',
+    'navidiranian.co.ir' => 'https://navidiranian.co.ir/',
+    'joomlafarsi.co.ir'  => 'https://joomlafarsi.co.ir/',
+    'cmssupport.ir'      => 'https://cmssupport.ir/',
+));
 
 @ini_set('display_errors', '0');
 @error_reporting(E_ALL & ~E_NOTICE & ~E_DEPRECATED & ~E_STRICT & ~E_WARNING);
@@ -81,10 +90,79 @@ function nvd_lang_url($lang) {
     return htmlspecialchars($self . '?' . http_build_query($q), ENT_QUOTES, 'UTF-8');
 }
 
+/** تولید رشته‌ی هگزادسیمال تصادفی و امن، با سازگاری به عقب تا PHP 5.6 / Secure random hex string, PHP 5.6-compatible */
+function nvd_random_hex($bytes) {
+    if (function_exists('random_bytes')) {
+        try { return bin2hex(random_bytes($bytes)); } catch (Exception $e) { /* fall through */ }
+    }
+    if (function_exists('openssl_random_pseudo_bytes')) {
+        $r = @openssl_random_pseudo_bytes($bytes);
+        if ($r !== false) return bin2hex($r);
+    }
+    $s = '';
+    for ($i = 0; $i < $bytes; $i++) $s .= chr(mt_rand(0, 255));
+    return bin2hex($s);
+}
+
+/** توکن CSRF را از کوکی می‌خواند یا در صورت نبود می‌سازد / Reads the CSRF token from a cookie, or creates one */
+function nvd_csrf_token() {
+    if (isset($_COOKIE['nvd_csrf']) && preg_match('/^[a-f0-9]{32}$/', $_COOKIE['nvd_csrf'])) {
+        return $_COOKIE['nvd_csrf'];
+    }
+    $t = nvd_random_hex(16);
+    if (!headers_sent()) {
+        @setcookie('nvd_csrf', $t, 0, '/', '', false, true);
+    }
+    return $t;
+}
+$NVD_CSRF = nvd_csrf_token();
+
+/* ---------------------------------------------------------------------------
+ |  ۱.۲) کلید دسترسی — دستی یا خودکار / Access key — manual or auto-generated
+ |  اگر NVD_ACCESS_KEY را خالی بگذارید، این ابزار یک کلید تصادفی می‌سازد و آن را
+ |  در فایل .nvd6-lock.php کنار همین اسکریپت نگه می‌دارد (چون فایل php است، حتی
+ |  اگر مستقیماً درخواست شود، به‌جای افشای متن، فقط اجرا و خالی برمی‌گردد).
+ |  توجه: در اولین بازدید (پیش از ساخته‌شدن قفل) هر کسی که زودتر از شما این آدرس
+ |  را باز کند کلید را می‌بیند؛ برای هاست‌های حساس، از قبل NVD_ACCESS_KEY را
+ |  به‌صورت دستی تنظیم کنید تا اصلاً به این حالت نیاز نباشد.
+ |
+ |  If NVD_ACCESS_KEY is left empty, this tool generates a random key and stores
+ |  it in .nvd6-lock.php next to this script (being a .php file, even a direct
+ |  request to it just executes and returns empty instead of leaking the text).
+ |  Note: on the very first visit (before the lock exists) whoever opens this
+ |  URL first sees the key; on sensitive hosts, set NVD_ACCESS_KEY manually in
+ |  advance so this auto-generation step is never needed.
+ --------------------------------------------------------------------------- */
+$nvdKeyFile         = __DIR__ . '/.nvd6-lock.php';
+$nvdAutoKey         = '';
+$nvdKeyIsNew        = false;
+$nvdKeyFileWritable = true;
+
+if (NVD_ACCESS_KEY === '') {
+    if (@is_file($nvdKeyFile)) {
+        $raw = @file_get_contents($nvdKeyFile);
+        if ($raw && preg_match('/NVDKEY:([a-f0-9]{32})/', $raw, $m)) {
+            $nvdAutoKey = $m[1];
+        }
+    }
+    if ($nvdAutoKey === '') {
+        $nvdAutoKey = nvd_random_hex(16);
+        $written = @file_put_contents($nvdKeyFile, "<?php exit; /* NVD6-LOCK - do not delete. NVDKEY:" . $nvdAutoKey . " */\n");
+        if ($written === false) {
+            $nvdKeyFileWritable = false;
+        } else {
+            @chmod($nvdKeyFile, 0600);
+            $nvdKeyIsNew = true;
+        }
+    }
+}
+define('NVD_EFFECTIVE_KEY', (NVD_ACCESS_KEY !== '') ? NVD_ACCESS_KEY : ($nvdKeyFileWritable ? $nvdAutoKey : ''));
+$nvdNoLockWarning = (NVD_ACCESS_KEY === '' && !$nvdKeyFileWritable);
+
 // قفل دسترسی / Access lock
-if (NVD_ACCESS_KEY !== '') {
-    $k = isset($_GET['key']) ? $_GET['key'] : '';
-    if ($k !== NVD_ACCESS_KEY) {
+if (NVD_EFFECTIVE_KEY !== '' && !$nvdKeyIsNew) {
+    $k = isset($_GET['key']) ? (string)$_GET['key'] : '';
+    if (!hash_equals(NVD_EFFECTIVE_KEY, $k)) {
         header('HTTP/1.1 403 Forbidden');
         echo '<meta charset="utf-8"><div style="font:16px Tahoma;direction:' . (NVD_LANG === 'en' ? 'ltr' : 'rtl') . ';padding:40px">'
            . T('دسترسی مجاز نیست. کلید صحیح را در آدرس وارد کنید.', 'Access denied. Enter the correct key in the URL.')
@@ -623,22 +701,31 @@ $E[] = nvd_item(T('لودر افزونه‌های تجاری (ionCube / SourceGu
     0);
 
 // PHP CLI برای کرون / PHP CLI for cron
+// این بررسی واقعاً exec() را فقط در حالت «تست‌های عمیق» اجرا می‌کند تا ابزارهای امنیتی هاست
+// با اجرای بی‌مورد یک فرمان shell در هر بارگذاری صفحه هشدار ندهند.
+// This check only actually runs exec() in "Deep Tests" mode, so host security tools don't
+// flag an unnecessary shell command on every single page load.
 $cliVersion = '';
-if (nvd_func('exec')) {
+$cliChecked = false;
+if ($deep && nvd_func('exec')) {
+    $cliChecked = true;
     $out = array();
     @exec('php -v 2>&1', $out);
     if (!empty($out[0]) && preg_match('/PHP\s+([\d\.]+)/i', $out[0], $m)) $cliVersion = $m[1];
 }
 $E[] = nvd_item(T('PHP خط فرمان (برای کرون‌جاب)', 'PHP Command Line (for cron jobs)'),
     ($cliVersion !== '') ? (version_compare($cliVersion, $J6['php_min'], '>=') ? 'pass' : 'warn') : 'info',
-    ($cliVersion !== '' ? 'PHP ' . $cliVersion : T('قابل تشخیص نیست', 'Cannot be detected')),
+    ($cliVersion !== '' ? 'PHP ' . $cliVersion : ($cliChecked ? T('قابل تشخیص نیست', 'Cannot be detected') : T('برای بررسی، «تست‌های عمیق» را اجرا کنید', 'Run "Deep Tests" to check'))),
     T('هم‌نسخه با PHP وب', 'Same version as web PHP'),
     ($cliVersion !== '')
         ? (version_compare($cliVersion, $J6['php_min'], '>=')
             ? T('کرون‌جاب سیستمی برای زمان‌بند وظایف جوملا قابل استفاده است.', 'A system cron job can be used for Joomla\'s task scheduler.')
             : T('نسخه‌ی CLI از نسخه‌ی وب قدیمی‌تر است؛ در کرون‌جاب حتماً مسیر کامل باینری PHP صحیح را بنویسید.', 'The CLI version is older than the web version; be sure to use the correct full PHP binary path in the cron job.'))
-        : T('اجرای دستور روی این هاست مجاز نیست. اگر کرون‌جاب ندارید، از زمان‌بند «Lazy Scheduler» یا «Web Cron» داخل خود جوملا ۶ استفاده کنید.',
-            'Running commands is not allowed on this host. If you have no cron job, use Joomla 6\'s built-in "Lazy Scheduler" or "Web Cron".'),
+        : ($cliChecked
+            ? T('اجرای دستور روی این هاست مجاز نیست. اگر کرون‌جاب ندارید، از زمان‌بند «Lazy Scheduler» یا «Web Cron» داخل خود جوملا ۶ استفاده کنید.',
+                'Running commands is not allowed on this host. If you have no cron job, use Joomla 6\'s built-in "Lazy Scheduler" or "Web Cron".')
+            : T('برای جلوگیری از اجرای بی‌مورد exec() روی سرور شما، این بررسی فقط در حالت «تست‌های عمیق» انجام می‌شود.',
+                'To avoid running exec() on your server unnecessarily, this check only runs in "Deep Tests" mode.')),
     1);
 
 // mail()
@@ -778,7 +865,7 @@ function nvd_http_head($url, $timeout = 5) {
             @curl_setopt($ch, CURLOPT_TIMEOUT, $timeout);
             @curl_setopt($ch, CURLOPT_CONNECTTIMEOUT, 3);
             @curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, true);
-            @curl_setopt($ch, CURLOPT_USERAGENT, 'NavidIranians-J6-Checker/2.0');
+            @curl_setopt($ch, CURLOPT_USERAGENT, 'NavidIranian-J6-Checker/2.0');
             @curl_exec($ch);
             $code = (int)@curl_getinfo($ch, CURLINFO_HTTP_CODE);
             $err  = @curl_error($ch);
@@ -893,7 +980,8 @@ if ($deep) {
  |  بخش H — تست اتصال دیتابیس (فرم اختیاری) / Section H — Database connection test
  =========================================================================== */
 $dbResult = null;
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['nvd_db_test'])) {
+$dbCsrfOk = hash_equals($NVD_CSRF, isset($_POST['nvd_csrf']) ? (string)$_POST['nvd_csrf'] : '');
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['nvd_db_test']) && $dbCsrfOk) {
     $dbHost = trim(nvd_get($_POST, 'db_host', 'localhost'));
     $dbUser = trim(nvd_get($_POST, 'db_user', ''));
     $dbPass = (string)nvd_get($_POST, 'db_pass', '');
@@ -981,6 +1069,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['nvd_db_test'])) {
             T('برای تست اتصال، افزونه‌ی pdo_mysql باید فعال باشد.', 'The pdo_mysql extension must be enabled to test the connection.'), 3, true);
     }
     $dbResult = $rows;
+} elseif ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['nvd_db_test']) && !$dbCsrfOk) {
+    $dbResult = array(nvd_item(
+        T('درخواست نامعتبر است (CSRF)', 'Invalid Request (CSRF)'), 'fail',
+        T('رد شد', 'Rejected'), '-',
+        T('این فرم منقضی شده یا از منبع دیگری ارسال شده است. صفحه را تازه‌سازی کرده و دوباره تلاش کنید.',
+            'This form has expired or was submitted from another source. Refresh the page and try again.'),
+        0
+    ));
 }
 
 /* ===========================================================================
@@ -1053,19 +1149,24 @@ $iniFixes = array_values(array_unique($iniFixes));
  |  ۶) حذف امن این فایل / Safely delete this file
  --------------------------------------------------------------------------- */
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['nvd_selfdestruct'])) {
-    $me = __FILE__;
-    if (@unlink($me)) {
-        $delLang = NVD_LANG;
-        echo '<!DOCTYPE html><html lang="' . ($delLang === 'en' ? 'en' : 'fa') . '" dir="' . ($delLang === 'en' ? 'ltr' : 'rtl') . '"><head><meta charset="utf-8">'
-           . '<title>' . T('حذف شد', 'Deleted') . '</title><style>body{font-family:Vazirmatn,Tahoma,sans-serif;background:#0B2540;color:#fff;'
-           . 'display:flex;align-items:center;justify-content:center;height:100vh;margin:0;text-align:center}'
-           . 'div{max-width:520px;padding:32px}h1{font-size:22px;margin:0 0 12px}p{color:#9FB3C8;line-height:2}</style></head><body><div>'
-           . '<h1>' . T('فایل بررسی با موفقیت حذف شد', 'The checker file was successfully deleted') . '</h1>'
-           . '<p>' . T('دیگر هیچ اطلاعاتی از سرور شما در دسترس عموم نیست.', 'No information about your server is publicly accessible anymore.') . '<br>'
-           . T('موفق باشید — %s', 'Good luck — %s', array(nvd_e(NVD_COMPANY_EN) . ' (' . nvd_e(NVD_COMPANY) . ')')) . '</p></div></body></html>';
-        exit;
+    if (!hash_equals($NVD_CSRF, isset($_POST['nvd_csrf']) ? (string)$_POST['nvd_csrf'] : '')) {
+        $deleteError = T('درخواست نامعتبر است (CSRF)؛ صفحه را تازه‌سازی کرده و دوباره تلاش کنید.', 'Invalid request (CSRF); refresh the page and try again.');
+    } else {
+        $me = __FILE__;
+        if (@unlink($me)) {
+            @unlink($nvdKeyFile);
+            $delLang = NVD_LANG;
+            echo '<!DOCTYPE html><html lang="' . ($delLang === 'en' ? 'en' : 'fa') . '" dir="' . ($delLang === 'en' ? 'ltr' : 'rtl') . '"><head><meta charset="utf-8">'
+               . '<title>' . T('حذف شد', 'Deleted') . '</title><style>body{font-family:Vazirmatn,Tahoma,sans-serif;background:#0B2540;color:#fff;'
+               . 'display:flex;align-items:center;justify-content:center;height:100vh;margin:0;text-align:center}'
+               . 'div{max-width:520px;padding:32px}h1{font-size:22px;margin:0 0 12px}p{color:#9FB3C8;line-height:2}</style></head><body><div>'
+               . '<h1>' . T('فایل بررسی با موفقیت حذف شد', 'The checker file was successfully deleted') . '</h1>'
+               . '<p>' . T('دیگر هیچ اطلاعاتی از سرور شما در دسترس عموم نیست.', 'No information about your server is publicly accessible anymore.') . '<br>'
+               . T('موفق باشید — %s', 'Good luck — %s', array(nvd_e(NVD_COMPANY_EN) . ' (' . nvd_e(NVD_COMPANY) . ')')) . '</p></div></body></html>';
+            exit;
+        }
+        $deleteError = T('حذف خودکار ممکن نشد؛ فایل را دستی از طریق File Manager پاک کنید.', 'Automatic deletion failed; delete the file manually via File Manager.');
     }
-    $deleteError = T('حذف خودکار ممکن نشد؛ فایل را دستی از طریق File Manager پاک کنید.', 'Automatic deletion failed; delete the file manually via File Manager.');
 }
 
 /* ---------------------------------------------------------------------------
@@ -1078,6 +1179,8 @@ $statusMeta = array(
     'info' => array('label' => T('اطلاع', 'Info'),  'cls' => 'st-info'),
 );
 $selfUrl = htmlspecialchars(isset($_SERVER['PHP_SELF']) ? $_SERVER['PHP_SELF'] : '', ENT_QUOTES, 'UTF-8');
+$activeKey = isset($_GET['key']) ? (string)$_GET['key'] : ($nvdKeyIsNew ? $nvdAutoKey : '');
+$nvdKeyQS  = ($activeKey !== '') ? '&key=' . urlencode($activeKey) : '';
 $htmlLang = (NVD_LANG === 'en') ? 'en' : 'fa';
 $htmlDir  = (NVD_LANG === 'en') ? 'ltr' : 'rtl';
 $bodyLangClass = (NVD_LANG === 'en') ? 'lang-en' : 'lang-fa';
@@ -1214,6 +1317,11 @@ input.inp:focus{outline:2px solid rgba(22,189,179,.35);border-color:var(--fz)}
 .tel b{font-size:15px;letter-spacing:.03em;direction:ltr}
 .tel span{font-size:11px;color:#9FB8CC}
 .tel:hover span{color:#04353B}
+.sitelinks{display:flex;flex-wrap:wrap;gap:8px;margin:12px 0 0}
+.sitelinks a{font-size:12.5px;font-weight:600;color:#C6D8E6;background:rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.12);border-radius:999px;padding:6px 13px;text-decoration:none;
+  direction:ltr;transition:.16s}
+.sitelinks a:hover{background:var(--fz);border-color:var(--fz);color:#04252B}
 .copy{margin-top:34px;border-top:1px solid rgba(255,255,255,.1);padding:16px 0;display:flex;
   justify-content:space-between;gap:12px;flex-wrap:wrap;font-size:12.5px;color:#7F97AC}
 @media (max-width:820px){
@@ -1277,20 +1385,34 @@ input.inp:focus{outline:2px solid rgba(22,189,179,.35);border-color:var(--fz)}
 
   <div class="actions">
     <?php if (!$deep): ?>
-      <a class="btn btn-p" href="?deep=1&lang=<?php echo NVD_LANG; ?>#net"><?php echo T('اجرای تست‌های عمیق (شبکه و mod_rewrite)', 'Run Deep Tests (network & mod_rewrite)'); ?></a>
+      <a class="btn btn-p" href="?deep=1&lang=<?php echo NVD_LANG . $nvdKeyQS; ?>#net"><?php echo T('اجرای تست‌های عمیق (شبکه و mod_rewrite)', 'Run Deep Tests (network & mod_rewrite)'); ?></a>
     <?php else: ?>
-      <a class="btn" href="<?php echo $selfUrl . '?lang=' . NVD_LANG; ?>"><?php echo T('بازگشت به حالت سریع', 'Back to Quick Mode'); ?></a>
+      <a class="btn" href="<?php echo $selfUrl . '?lang=' . NVD_LANG . $nvdKeyQS; ?>"><?php echo T('بازگشت به حالت سریع', 'Back to Quick Mode'); ?></a>
     <?php endif; ?>
     <button class="btn" onclick="nvdCopy()"><?php echo T('کپی متن آماده برای پشتیبانی هاست', 'Copy Ready-Made Text for Host Support'); ?></button>
     <button class="btn" onclick="window.print()"><?php echo T('چاپ / ذخیره PDF', 'Print / Save as PDF'); ?></button>
     <a class="btn" href="#dbtest"><?php echo T('تست اتصال دیتابیس', 'Database Connection Test'); ?></a>
     <form method="post" style="display:inline" onsubmit="return confirm('<?php echo T('این فایل برای همیشه حذف می‌شود. مطمئن هستید؟', 'This file will be permanently deleted. Are you sure?'); ?>')">
       <input type="hidden" name="nvd_selfdestruct" value="1">
+      <input type="hidden" name="nvd_csrf" value="<?php echo nvd_e($NVD_CSRF); ?>">
       <button class="btn btn-d" type="submit"><?php echo T('حذف این فایل از سرور', 'Delete This File From Server'); ?></button>
     </form>
   </div>
   <?php if (isset($deleteError)): ?>
     <div class="note"><?php echo nvd_e($deleteError); ?></div>
+  <?php endif; ?>
+  <?php if ($nvdKeyIsNew): ?>
+    <div class="note" style="border-color:var(--fail);background:#FFF3F3;color:#7A1B2E">
+      <?php echo T('یک کلید دسترسی تصادفی برای این گزارش ساخته شد و در فایل <code>.nvd6-lock.php</code> کنار همین اسکریپت ذخیره شد. از این پس، این صفحه فقط با همین کلید در آدرس باز می‌شود — لینک زیر را همین حالا ذخیره یا بوکمارک کنید، چون بعد از بستن این صفحه دیگر جایی نمایش داده نمی‌شود:',
+                    'A random access key was generated for this report and stored in <code>.nvd6-lock.php</code> next to this script. From now on, this page only opens with that key in the URL — save or bookmark the link below now, since it will not be shown again after you leave this page:'); ?>
+      <br><code class="mono" style="display:inline-block;margin-top:8px"><?php echo nvd_e(($isHttps ? 'https://' : 'http://') . $hostName . $selfUrl . '?key=' . $nvdAutoKey); ?></code>
+    </div>
+  <?php endif; ?>
+  <?php if (!empty($nvdNoLockWarning)): ?>
+    <div class="note" style="border-color:var(--fail);background:#FFF3F3;color:#7A1B2E">
+      <?php echo T('ساخت خودکار قفل دسترسی ممکن نشد (پوشه غیرقابل نوشتن است)؛ این گزارش برای هر کسی که آدرس را بداند قابل مشاهده است. برای محدود کردن دسترسی، مقدار <code>NVD_ACCESS_KEY</code> را در بالای فایل به‌صورت دستی تنظیم کنید.',
+                    'The automatic access lock could not be created (the folder is not writable); this report is visible to anyone who knows the URL. To restrict access, set <code>NVD_ACCESS_KEY</code> manually near the top of the file.'); ?>
+    </div>
   <?php endif; ?>
 
 <?php foreach ($sections as $sec): ?>
@@ -1320,6 +1442,7 @@ input.inp:focus{outline:2px solid rgba(22,189,179,.35);border-color:var(--fz)}
     </p>
     <form method="post">
       <input type="hidden" name="nvd_db_test" value="1">
+      <input type="hidden" name="nvd_csrf" value="<?php echo nvd_e($NVD_CSRF); ?>">
       <div class="grid2">
         <div><label class="fld"><?php echo T('میزبان دیتابیس', 'Database Host'); ?></label>
           <input class="inp" name="db_host" dir="ltr" value="<?php echo nvd_e(nvd_get($_POST,'db_host','localhost')); ?>"></div>
@@ -1415,6 +1538,11 @@ input.inp:focus{outline:2px solid rgba(22,189,179,.35);border-color:var(--fz)}
           <?php echo T('تخصص ما در جوملا، وردپرس و توسعه‌ی اختصاصی؛ با پشتیبانی فارسی و عربی برای بازار ایران و عراق.',
                         'Our expertise: Joomla, WordPress and custom development; with Persian and Arabic support for the Iran and Iraq markets.'); ?>
         </p>
+        <div class="sitelinks">
+          <?php foreach (NVD_SITES as $siteLabel => $siteUrl): ?>
+            <a href="<?php echo nvd_e($siteUrl); ?>" target="_blank" rel="noopener noreferrer"><?php echo nvd_e($siteLabel); ?></a>
+          <?php endforeach; ?>
+        </div>
       </div>
       <div>
         <h4><?php echo T('خدمات ما', 'Our Services'); ?></h4>

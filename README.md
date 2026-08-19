@@ -2,7 +2,9 @@
 
 A single-file PHP script that audits a shared-hosting account against Joomla! 6's official technical requirements — PHP version, required/recommended extensions, `php.ini` settings, filesystem permissions, database compatibility, and more — then produces a clear pass/warn/fail report plus a ready-to-send message for your host's support team.
 
-Built and maintained by **[Navid Iranians Co.](https://www.navidiranians.com)** (شرکت نوید ایرانیان) — web design, SEO, hosting and digital marketing.
+Built and maintained by **Navid Iranian Co.** (شرکت نوید ایرانیان) — web design, SEO, hosting and digital marketing.
+🌐 [navidiranian.com](https://navidiranian.com/) · [navidiranian.co.ir](https://navidiranian.co.ir/) · [joomlafarsi.co.ir](https://joomlafarsi.co.ir/) · [cmssupport.ir](https://cmssupport.ir/)
+📞 [+98 939 556 6652](tel:+989395566652) (Mobile/WhatsApp) · [+98 21 9130 3662](tel:+982191303662) (Head Office)
 
 🌐 **Bilingual**: the tool's UI is available in **English** and **Persian (فارسی)**, switchable at runtime with no reinstall.
 
@@ -25,9 +27,10 @@ Built and maintained by **[Navid Iranians Co.](https://www.navidiranians.com)** 
   - **Optional database test**: connects with credentials you enter, checks MySQL/MariaDB version, `utf8mb4` support, `CREATE`/`ALTER`/`DROP` privileges, InnoDB availability — nothing is stored or transmitted anywhere
 - **Weighted readiness score** (0–100%) with a clear verdict: *Not Ready*, *Will Install But Incomplete*, *Ready With Improvements*, or *Fully Ready*.
 - **Ready-made support-ticket text**, auto-generated from the failed/warned items, one click to copy.
-- **Self-destruct button** — deletes the script from the server when you're done (recommended: never leave this file publicly accessible).
+- **Self-destruct button** — deletes the script from the server when you're done (recommended: never leave this file publicly accessible). Protected by a CSRF token, so it can't be triggered by a cross-site request.
 - **Print/PDF export** of the full report.
-- Optional `?key=...` access lock (set `NVD_ACCESS_KEY` in the file) to keep the report private.
+- **Access lock, on by default** — set `NVD_ACCESS_KEY` yourself, or leave it empty and the tool auto-generates a random key on first run, storing it in `.nvd6-lock.php` next to the script and requiring `?key=...` on every request after that.
+- The database-test form is also CSRF-protected, and the CLI-PHP version probe (which shells out to `php -v`) only runs when you explicitly launch Deep Tests, not on every page load.
 
 ## 🚀 Usage
 
@@ -42,15 +45,17 @@ Built and maintained by **[Navid Iranians Co.](https://www.navidiranians.com)** 
 6. Copy the ready-made ticket text and send it to your host's support if anything needs fixing.
 7. **When you're done, click "Delete This File From Server"** (or delete it manually). Never leave a diagnostic script like this publicly reachable long-term.
 
-### Locking the report (optional)
+### Locking the report
 
-Open the file and set an access key:
+By default the report is locked. If you leave `NVD_ACCESS_KEY` empty, the tool generates a random key on its first run and saves it to `.nvd6-lock.php` in the same folder; that first response shows you the key and a ready-made link with `?key=...` — save it, since it won't be shown again. Every request after that requires the same key.
+
+> On a host where anyone could plausibly open the URL before you do, set the key yourself in advance instead of relying on auto-generation:
 
 ```php
 define('NVD_ACCESS_KEY', 'something-only-you-know');
 ```
 
-Then the report only opens with `?key=something-only-you-know` in the URL.
+Then the report only opens with `?key=something-only-you-know` in the URL. If the folder isn't writable and no key is set, the tool falls back to no lock and shows a warning banner on every load telling you to set one manually.
 
 ## 🖥 Requirements
 
@@ -78,8 +83,9 @@ Released under the [MIT License](LICENSE).
 
 ## 🏢 About
 
-**Navid Iranians Co. (شرکت نوید ایرانیان)** — website design, SEO, web hosting, domain registration and digital marketing, with Persian/Arabic support for the Iran and Iraq markets.
-📞 0939 556 6652 · 021 9130 3662
+**Navid Iranian Co. (شرکت نوید ایرانیان)** — website design, SEO, web hosting, domain registration and digital marketing, with Persian/Arabic support for the Iran and Iraq markets.
+🌐 [navidiranian.com](https://navidiranian.com/) · [navidiranian.co.ir](https://navidiranian.co.ir/) · [joomlafarsi.co.ir](https://joomlafarsi.co.ir/) · [cmssupport.ir](https://cmssupport.ir/)
+📞 [+98 939 556 6652](tel:+989395566652) · [+98 21 9130 3662](tel:+982191303662)
 
 ---
 
@@ -87,7 +93,9 @@ Released under the [MIT License](LICENSE).
 
 ابزاری تک‌فایلی و کاملاً PHP برای بررسی آمادگی هاست اشتراکی جهت نصب **جوملا! ۶**. این اسکریپت سرور را دقیقاً بر اساس الزامات فنی رسمی جوملا ۶ می‌سنجد — نسخه‌ی PHP، افزونه‌های الزامی و توصیه‌شده، تنظیمات `php.ini`، مجوزهای فایل‌سیستم، سازگاری دیتابیس و موارد دیگر — و در پایان یک گزارش شفاف با وضعیت قبول/هشدار/مردود، به همراه متنی آماده برای ارسال به پشتیبانی هاست، تحویل می‌دهد.
 
-ساخته و نگهداری‌شده توسط **[شرکت نوید ایرانیان](https://www.navidiranians.com)** — طراحی وب‌سایت، سئو، میزبانی وب و دیجیتال مارکتینگ.
+ساخته و نگهداری‌شده توسط **شرکت نوید ایرانیان** — طراحی وب‌سایت، سئو، میزبانی وب و دیجیتال مارکتینگ.
+🌐 [navidiranian.com](https://navidiranian.com/) · [navidiranian.co.ir](https://navidiranian.co.ir/) · [joomlafarsi.co.ir](https://joomlafarsi.co.ir/) · [cmssupport.ir](https://cmssupport.ir/)
+📞 [۰۹۳۹ ۵۵۶ ۶۶۵۲](tel:+989395566652) (همراه/واتساپ) · [۰۲۱ ۹۱۳۰ ۳۶۶۲](tel:+982191303662) (دفتر مرکزی)
 
 🌐 **چندزبانه**: رابط کاربری ابزار به **فارسی** و **انگلیسی** در دسترس است و بدون نیاز به نصب مجدد، در لحظه قابل تغییر است.
 
@@ -106,9 +114,10 @@ Released under the [MIT License](LICENSE).
   - **تست اتصال دیتابیس اختیاری**: با اطلاعاتی که وارد می‌کنید متصل می‌شود، نسخه‌ی MySQL/MariaDB، پشتیبانی از `utf8mb4`، مجوزهای `CREATE`/`ALTER`/`DROP` و فعال بودن InnoDB را بررسی می‌کند — هیچ اطلاعاتی جایی ذخیره یا ارسال نمی‌شود
 - **امتیاز آمادگی وزن‌دار** (۰ تا ۱۰۰٪) همراه با نتیجه‌گیری شفاف: «آماده‌ی نصب نیست»، «نصب می‌شود اما ناقص»، «آماده با نکات قابل بهبود» یا «کاملاً آماده».
 - **متن آماده برای تیکت پشتیبانی**، به‌صورت خودکار از روی موارد مردود/هشدار ساخته می‌شود و با یک کلیک کپی می‌شود.
-- **دکمه‌ی خودحذفی** — پس از پایان کار، اسکریپت را از روی سرور پاک می‌کند (توصیه: هرگز این فایل را برای مدت طولانی در دسترس عموم نگذارید).
+- **دکمه‌ی خودحذفی** — پس از پایان کار، اسکریپت را از روی سرور پاک می‌کند (توصیه: هرگز این فایل را برای مدت طولانی در دسترس عموم نگذارید). این دکمه با یک توکن CSRF محافظت می‌شود تا از طریق یک سایت دیگر قابل فراخوانی نباشد.
 - خروجی **چاپ / PDF** از کل گزارش.
-- امکان قفل دسترسی با `?key=...` (با تنظیم `NVD_ACCESS_KEY` در فایل) برای خصوصی نگه‌داشتن گزارش.
+- **قفل دسترسی، به‌صورت پیش‌فرض فعال** — یا خودتان `NVD_ACCESS_KEY` را تنظیم کنید، یا خالی بگذارید تا ابزار در اولین اجرا یک کلید تصادفی بسازد، آن را در فایل `.nvd6-lock.php` کنار اسکریپت ذخیره کند و از آن پس در هر درخواست `?key=...` را الزامی کند.
+- فرم تست دیتابیس هم با توکن CSRF محافظت می‌شود، و بررسی نسخه‌ی PHP خط فرمان (که یک فرمان shell اجرا می‌کند) فقط در حالت «تست‌های عمیق» انجام می‌شود، نه در هر بار بارگذاری صفحه.
 
 ## 🚀 روش استفاده
 
@@ -123,15 +132,17 @@ https://your-domain.com/joomla6check.php
 ۶) اگر موردی نیاز به اصلاح دارد، متن آماده‌ی تیکت را کپی و برای پشتیبانی هاست ارسال کنید.
 ۷) **در پایان کار، حتماً روی «حذف این فایل از سرور» بزنید** (یا دستی حذف کنید). هرگز چنین اسکریپت تشخیصی را برای مدت طولانی در دسترس عموم نگذارید.
 
-### قفل کردن گزارش (اختیاری)
+### قفل کردن گزارش
 
-فایل را باز کرده و یک کلید تعیین کنید:
+گزارش به‌صورت پیش‌فرض قفل است. اگر `NVD_ACCESS_KEY` را خالی بگذارید، ابزار در اولین اجرا یک کلید تصادفی می‌سازد و آن را در فایل `.nvd6-lock.php` کنار همان پوشه ذخیره می‌کند؛ همان پاسخ اول، کلید و یک لینک آماده با `?key=...` را نشان می‌دهد — آن را ذخیره کنید چون دیگر نمایش داده نمی‌شود. هر درخواست بعدی به همین کلید نیاز دارد.
+
+> روی هاستی که ممکن است دیگران زودتر از شما آدرس را باز کنند، به‌جای تکیه بر کلید خودکار، از قبل کلید را دستی تنظیم کنید:
 
 ```php
 define('NVD_ACCESS_KEY', 'کلیدی که فقط خودتان می‌دانید');
 ```
 
-از این پس گزارش فقط با افزودن `?key=کلید-شما` به آدرس باز می‌شود.
+از این پس گزارش فقط با افزودن `?key=کلید-شما` به آدرس باز می‌شود. اگر پوشه قابل نوشتن نباشد و کلیدی هم تنظیم نشده باشد، ابزار بدون قفل ادامه می‌دهد و در هر بار بارگذاری یک هشدار برای تنظیم دستی کلید نشان می‌دهد.
 
 ## 🖥 پیش‌نیازها
 
@@ -159,5 +170,6 @@ T('حداقل %s', 'Minimum %s', array($v));  // با جای‌گذاری به �
 
 ## 🏢 درباره‌ی ما
 
-**شرکت نوید ایرانیان (Navid Iranians Co.)** — طراحی وب‌سایت، سئو، میزبانی وب، ثبت دامنه و دیجیتال مارکتینگ، با پشتیبانی فارسی و عربی برای بازار ایران و عراق.
-📞 ۰۹۳۹ ۵۵۶ ۶۶۵۲ · ۰۲۱ ۹۱۳۰ ۳۶۶۲
+**شرکت نوید ایرانیان (Navid Iranian Co.)** — طراحی وب‌سایت، سئو، میزبانی وب، ثبت دامنه و دیجیتال مارکتینگ، با پشتیبانی فارسی و عربی برای بازار ایران و عراق.
+🌐 [navidiranian.com](https://navidiranian.com/) · [navidiranian.co.ir](https://navidiranian.co.ir/) · [joomlafarsi.co.ir](https://joomlafarsi.co.ir/) · [cmssupport.ir](https://cmssupport.ir/)
+📞 [۰۹۳۹ ۵۵۶ ۶۶۵۲](tel:+989395566652) · [۰۲۱ ۹۱۳۰ ۳۶۶۲](tel:+982191303662)
